@@ -8,6 +8,49 @@ const emailService = require('../../services/emailService');
 const libs = require('../../lib');
 const middlewares = require('../../middlewares');
 const config = require('../../config/configVars');
+const e = require('express');
+const { userService } = require("../../services")
+router.post('/otp',async (req,res) => {
+try{
+    const otp = req.body.OTP;
+     const token = req.cookies.otptoken;
+     // decode the token
+     const decoded = jwt.decode(token);
+       //console.log("d",decoded);
+      const email = decoded.email;
+      const password = decoded.password;
+      const rememberMe = decoded.rememberMe;
+        // console.log("email",email);
+        // console.log("password",password);
+        // console.log("rememberMe",rememberMe);
+
+     if(otp === decoded.otp)
+     {
+       const user = await controllers.authController.lastactiveUpdate(email);
+        if ( !user?.email ) throw new Error(libs.messages.errorMessage.tokenIsNotValid);
+        const [token, longTermToken] = await controllers.authController.login({email, password, rememberMe});
+        if (longTermToken) {
+            res.cookie(
+                'ljwt', longTermToken, 
+                {
+                    ...configVars.sessionCookieConfig,
+                    maxAge: libs.constants.longTermSessionExpireTime_Seconds * 1000,
+                }
+            )
+        }
+        res.clearCookie('otptoken');
+        res.cookie('jwt', token, configVars.sessionCookieConfig)
+        return res.json({ 'status': 'Success' });
+        // console.log("OTP matched");
+     }else{
+        console.log("otp not matched");
+     }
+}
+catch (error){
+    console.log("eeeee",error);
+    return res.json({error: error?.message});
+}
+})
 
 router.post('/login', async (req, res) => {
     try {
@@ -19,6 +62,17 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({error: `Email is not valid.`});
         }
         const [token, longTermToken] = await controllers.authController.login({email, password, rememberMe});
+        if(token===null)
+        {
+            res.cookie(
+                'otptoken', longTermToken, 
+                {
+                    ...configVars.sessionCookieConfig,
+                    maxAge: libs.constants.longTermSessionExpireTime_Seconds * 1000,
+                }
+            )
+            throw new Error(libs.messages.errorMessage.userIsInactive);
+        }
         if (longTermToken) {
             res.cookie(
                 'ljwt', longTermToken, 

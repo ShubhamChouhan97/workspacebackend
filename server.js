@@ -10,7 +10,7 @@ const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv')
 dotenv.config();
 global.argv = process.argv.slice(2);
-const configVar = require('./config/configVars');
+const configVar = require('./config/configVars'); 
 
 
 const app = express();
@@ -30,6 +30,7 @@ const userActivityController = require('./controllers/userActivityController');
 const notificationController = require('./controllers/notificationController');
 const emailService = require('./services/emailService');
 const cookie = require('cookie');
+
 
 const socketRoutes = require('./routes/socketRoutes');
 

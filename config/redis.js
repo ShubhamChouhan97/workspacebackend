@@ -8,7 +8,7 @@ const {
 const redisConfig = {
     port: redisPort,
     host: redisIp,
-    password: redisPassword,
+    // password: redisPassword,
 }
 
 const sessionRedisConfig = {

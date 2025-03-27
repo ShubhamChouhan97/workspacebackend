@@ -4,7 +4,8 @@ const baseConfig = function({env}) {
     if ( env == "production") {
         return {
             host: 'https://backend.workspace.codequotient.com', 
-            frontendURL: 'https://workspace.codequotient.com',
+           frontendURL: 'https://workspace.codequotient.com',
+           // frontendURL: 'http://localhost:3000',
             cloudStorageUrl: `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com`,
             sessionCookieConfig: {
                 domain: '.workspace.codequotient.com',
