@@ -10,47 +10,101 @@ const middlewares = require('../../middlewares');
 const config = require('../../config/configVars');
 const e = require('express');
 const { userService } = require("../../services")
-router.post('/otp',async (req,res) => {
-try{
-    const otp = req.body.OTP;
-     const token = req.cookies.otptoken;
-     // decode the token
-     const decoded = jwt.decode(token);
-       //console.log("d",decoded);
-      const email = decoded.email;
-      const password = decoded.password;
-      const rememberMe = decoded.rememberMe;
-        // console.log("email",email);
-        // console.log("password",password);
-        // console.log("rememberMe",rememberMe);
+// router.post('/otp',async (req,res) => {
+// try{
+//     const otp = req.body.OTP;
+//      const token = req.cookies.otptoken;
+//      // decode the token
+//      const decoded = jwt.decode(token);
+//        //console.log("d",decoded);
+//       const email = decoded.email;
+//       const password = decoded.password;
+//       const rememberMe = decoded.rememberMe;
+//         // console.log("email",email);
+//         // console.log("password",password);
+//         // console.log("rememberMe",rememberMe);
 
-     if(otp === decoded.otp)
-     {
-       const user = await controllers.authController.lastactiveUpdate(email);
-        if ( !user?.email ) throw new Error(libs.messages.errorMessage.tokenIsNotValid);
-        const [token, longTermToken] = await controllers.authController.login({email, password, rememberMe});
-        if (longTermToken) {
-            res.cookie(
-                'ljwt', longTermToken, 
-                {
-                    ...configVars.sessionCookieConfig,
-                    maxAge: libs.constants.longTermSessionExpireTime_Seconds * 1000,
-                }
-            )
-        }
-        res.clearCookie('otptoken');
-        res.cookie('jwt', token, configVars.sessionCookieConfig)
-        return res.json({ 'status': 'Success' });
-        // console.log("OTP matched");
-     }else{
-        console.log("otp not matched");
-     }
-}
-catch (error){
-    console.log("eeeee",error);
-    return res.json({error: error?.message});
-}
-})
+//      if(otp === decoded.otp)
+//      {
+//        const user = await controllers.authController.lastactiveUpdate(email);
+//         if ( !user?.email ) throw new Error(libs.messages.errorMessage.tokenIsNotValid);
+//         const [token, longTermToken] = await controllers.authController.login({email, password, rememberMe});
+//         if (longTermToken) {
+//             res.cookie(
+//                 'ljwt', longTermToken, 
+//                 {
+//                     ...configVars.sessionCookieConfig,
+//                     maxAge: libs.constants.longTermSessionExpireTime_Seconds * 1000,
+//                 }
+//             )
+//         }
+//         res.clearCookie('otptoken');
+//         res.cookie('jwt', token, configVars.sessionCookieConfig)
+//         return res.json({ 'status': 'Success' });
+//         // console.log("OTP matched");
+//      }else{
+//         error.message = "Otp Not Match";
+//         return res.json({error: error?.message});;
+//         console.log("otp not matched");
+//      }
+// }
+// catch (error){
+//     console.log("eeeee",error);
+//     return res.json({error: error?.message});
+// }
+// })
+
+router.post('/otp', async (req, res) => {
+	try {
+		const otp = req.body.OTP;
+		const token = req.cookies.otptoken;
+
+		if (!token) {
+			return res.status(400).json({ error: 'OTP token is missing' });
+		}
+
+		// Decode the token
+		const decoded = jwt.decode(token);
+
+		if (!decoded || !decoded.email || !decoded.otp) {
+			return res.status(400).json({ error: 'Invalid OTP token' });
+		}
+
+		const { email, password, rememberMe } = decoded;
+
+		if (otp === decoded.otp) {
+			const user = await controllers.authController.lastactiveUpdate(email);
+
+			if (!user?.email) {
+				return res.status(401).json({ error: libs.messages.errorMessage.tokenIsNotValid });
+			}
+
+			const [token, longTermToken] = await controllers.authController.login({
+				email,
+				password,
+				rememberMe
+			});
+
+			if (longTermToken) {
+				res.cookie('ljwt', longTermToken, {
+					...configVars.sessionCookieConfig,
+					maxAge: libs.constants.longTermSessionExpireTime_Seconds * 1000,
+				});
+			}
+
+			res.clearCookie('otptoken');
+			res.cookie('jwt', token, configVars.sessionCookieConfig);
+
+			return res.json({ status: 'Success' });
+		} else {
+			console.error('OTP not matched');
+			return res.json({ error: 'OTP Not Matched' });
+		}
+	} catch (error) {
+		console.error('Error in OTP verification:', error);
+		return res.status(500).json({ error: error?.message || 'Internal Server Error' });
+	}
+});
 
 router.post('/login', async (req, res) => {
     try {
