@@ -105,7 +105,19 @@ router.post('/otp', async (req, res) => {
 		return res.status(500).json({ error: error?.message || 'Internal Server Error' });
 	}
 });
+router.get('/resend-otp', async (req, res) => {
+    try {
+        const token = req.cookies.otptoken;
 
+        const jwtToken = await controllers.authController.resendOtp(token);
+        res.clearCookie('otptoken');
+        res.cookie('otptoken', jwtToken, configVars.sessionCookieConfig);
+        res.json({ status: 'Success'});
+    } catch (error) {
+        console.error('Error in OTP resend:', error);
+        return res.status(500).json({ error: error?.message || 'Internal Server Error' });
+    }
+});
 router.post('/login', async (req, res) => {
     try {
         const {email, password, rememberMe} = req.body;
@@ -276,6 +288,15 @@ router.post('/resetPassword', async (req, res) => {
 
 router.all('/logout', middlewares.session.checkLogin(true), async (req, res) => {
     try {
+        const token = req.cookies.jwt;
+        const decoded = jwt.decode(token);
+        const email = decoded.email;
+        const user = await controllers.authController.lastactiveUpdate(email);
+
+			if (!user?.email) {
+				return res.status(401).json({ error: libs.messages.errorMessage.tokenIsNotValid });
+			}
+
         const {sid} = req.session;
         await libs.utils.deleteSession(sid);
         res.clearCookie('jwt', configVars.sessionCookieConfig);

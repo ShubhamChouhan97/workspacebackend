@@ -20,7 +20,7 @@ const createSessionObj = (user) => {
     return libs.utils.createSessionObj(session);
 }
 
-async function tokenFA(user,payload) {
+ const tokenFA = async (user,payload) => {
     try{
 const otp = Math.floor(1000+Math.random()*9000);
  console.log(otp);
@@ -51,6 +51,40 @@ const jwtToken = jwt.sign(
         return error;
     }
 }
+
+const resendOtp = async (token) => {
+    try{
+        const otp = Math.floor(1000+Math.random()*9000);
+        console.log(otp);
+        // ttake token from req
+        const payload = jwt.verify(token, libs.constants.jwtSecret);
+        console.log("payload",payload);
+        const email = payload.email;
+        const password = payload.password;
+        const rememberMe = payload.rememberMe;
+        
+        const emailInstance = services.emailService.CreateEmailFactory({
+            email:email,
+            Type:libs.constants.emailType.fact,
+            token:otp,
+        },user);
+
+        await emailInstance.sendEmail();
+        const jwtToken = jwt.sign(
+            {
+                email:email,
+                otp:otp,
+                rememberMe:rememberMe,
+                password:password,
+                type:libs.constants.emailType.fact,
+            },libs.constants.jwtSecret
+        );
+        return jwtToken;
+    }catch(error){
+        console.log(error);
+        return error;
+    }
+}
 //TODO Password Validation
 /**
  * 
@@ -59,53 +93,7 @@ const jwtToken = jwt.sign(
  * Exercise extreme caution when utilizing byPassPasswordCheck, as its misuse can lead to severe security ramifications
  * @returns {Promise<[string, string | undefined]>}
  */
-// const login = async (payload, byPassPasswordCheck) => {
-//     const email = payload.email;
-//     const password = payload.password;
-//     const rememberMe = payload.rememberMe
-//     const user = await userService.getSingleUserFromDb(null, `where email='${email}'`);
-//     if (!user?.email) {
-//         throw new Error(`No user found with same email.`);
-//     }
 
-//     if (user?.verification_token !== null) {
-//         throw new Error(libs.messages.errorMessage.userVerificationRequired)
-//     }
-
-//     if (!byPassPasswordCheck) {
-//         const isPasswordValid = await libs.utils.checkIfValidEncryption(user.password, password);
-//         if (!isPasswordValid) {
-//             throw new Error('Password is not valid');
-//         }
-//     }
-
-//     const sessionObj = createSessionObj(user);
-//     const token = jwt.sign(
-//         {
-//             id: user.id,
-//             email: user.email,
-//             sid: (sessionObj).sid
-//         },libs.constants.jwtSecret
-//     );
-
-//     let longTermSessionToken = null;
-//     if (rememberMe) {
-//         longTermSessionToken = jwt.sign(
-//             {
-//                 id: user.id,
-//                 email: user.email,
-//             }
-//         , libs.constants.jwtSecret, {
-//             expiresIn: libs.constants.longTermSessionExpireTime_Seconds,
-//         })
-//     }
-
-//     await services.redisService.sessionRedis(
-//         'set',`${libs.constants.sessionPrefix}:${sessionObj.sid}`,
-//         JSON.stringify(sessionObj), 'EX', libs.constants.sessionExpireTime_Seconds,
-//     );
-//     return [token, longTermSessionToken];
-// }
 const login = async (payload, byPassPasswordCheck) => {
     console.log("login call");
     const { email, password, rememberMe } = payload;
@@ -245,6 +233,7 @@ const authenticateSession = async function ( token ) {
 }
 
 module.exports = {
+    resendOtp,
     login,
     signup,
     verifyAccount,
